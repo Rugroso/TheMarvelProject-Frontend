@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 export default function RegisterScreen() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -21,7 +22,7 @@ export default function RegisterScreen() {
   const { signUp } = useAuth();
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Por favor completa todos los campos');
       return;
     }
@@ -38,7 +39,7 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      await signUp(email, password);
+      await signUp(email, password, name.trim());
       Alert.alert(
         '¡Éxito!', 
         'Cuenta creada correctamente. Ya puedes iniciar sesión.',
@@ -85,6 +86,17 @@ export default function RegisterScreen() {
         <View style={styles.formContainer}>
           <Text style={styles.title}>Crear Cuenta</Text>
           <Text style={styles.subtitle}>Únete a The Marvel Project</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Nombre</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Tu nombre"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+          </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
