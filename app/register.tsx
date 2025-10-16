@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -22,23 +22,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
 
-  useEffect(() => {
-    //User POST 
-    fetch('http://localhost:3000/api/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ firebaseUid , email, displayName : name}),
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log('Success:', data);
-    })
-    .catch((error) => {
-      console.error('Error:', error);
-    });
-  }, [loading]);
+  // NOTE: We'll POST to the backend only after successful Firebase signup
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -58,7 +42,30 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      await signUp(email, password, name.trim());
+      const createdUser = await signUp(email, password, name.trim());
+      const uid = createdUser?.uid || '';
+      setFirebaseUid(uid);
+
+      // Post to backend with firebase UID
+      try {
+        const resp = await fetch('http://localhost:3000/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ firebaseUid: uid, email, displayName: name }),
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text();
+          console.error('Backend error posting user:', resp.status, text);
+        } else {
+          const data = await resp.json();
+          console.log('User created in backend:', data);
+        }
+      } catch (postErr) {
+        console.error('Error posting user to backend:', postErr);
+      }
       Alert.alert(
         '¡Éxito!', 
         'Cuenta creada correctamente. Ya puedes iniciar sesión.',

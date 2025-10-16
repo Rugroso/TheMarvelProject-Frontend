@@ -12,7 +12,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, displayName?: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName?: string) => Promise<User>;
   signIn: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -52,6 +52,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Forzar refresco del usuario en contexto
         setUser({ ...credential.user, displayName } as User);
       }
+      // Devuelve el usuario creado para que el llamador pueda obtener el uid
+      return credential.user;
     } catch (error) {
       throw error;
     }
