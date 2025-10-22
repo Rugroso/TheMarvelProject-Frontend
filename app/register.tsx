@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -110,6 +111,7 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.formContainer}>
+          <Image source={require('@/assets/images/Marvel-Logo-PNG-Cutout.png')} style={styles.logo} />
           <Text style={styles.title}>Crear Cuenta</Text>
           <Text style={styles.subtitle}>Únete a The Marvel Project</Text>
 
@@ -186,7 +188,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#5a1f1f', // maroon background to match mock
   },
   scrollContainer: {
     flexGrow: 1,
@@ -194,7 +196,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   formContainer: {
-    backgroundColor: 'white',
+    backgroundColor: 'transparent', // keep form visually merged with background
     borderRadius: 20,
     padding: 30,
     shadowColor: '#000',
@@ -211,13 +213,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#333',
+    color: '#fff',
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 30,
-    color: '#666',
+    color: '#e8bdbd',
   },
   inputContainer: {
     marginBottom: 20,
@@ -226,30 +228,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: '#f0dada',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderRadius: 25,
     padding: 15,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#3f1515', // darker pill style input
+    color: '#fff',
   },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
+    backgroundColor: '#b96b6b', // pinkish rounded button
+    borderRadius: 25,
     padding: 15,
     alignItems: 'center',
     marginTop: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#8f8f8f',
   },
   buttonText: {
-    color: 'white',
+    color: '#111',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   loginContainer: {
     flexDirection: 'row',
@@ -258,11 +265,18 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 16,
-    color: '#666',
+    color: '#f0dada',
   },
   loginLink: {
     fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: '#fff',
+    fontWeight: '700',
+  },
+  logo: {
+    width: 420,
+    height: 300,
+    resizeMode: 'contain',
+    alignSelf: 'center',
+    marginBottom: 12,
   },
 });
