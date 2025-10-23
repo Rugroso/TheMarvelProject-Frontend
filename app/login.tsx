@@ -1,3 +1,4 @@
+import GoogleButton from '@/components/GoogleButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -18,7 +19,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -56,9 +57,21 @@ export default function LoginScreen() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      Alert.alert('Error', 'No se pudo iniciar sesión con Google');
+      console.error('Google login error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const goToRegister = () => {
     router.push('/register');
-    
   };
 
   return (
@@ -117,6 +130,20 @@ export default function LoginScreen() {
                 {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
               </Text>
             </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>O continúa con</Text>
+              <View style={styles.divider} />
+            </View>
+
+            {/* Google Button */}
+            <GoogleButton 
+              onPress={handleGoogleLogin}
+              disabled={loading}
+              text="Continuar con Google"
+            />
           </View>
 
           {/* Footer Section */}
@@ -142,8 +169,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
+    padding: 15,
   },
   contentWrapper: {
     maxWidth: 400,
@@ -177,7 +203,6 @@ const styles = StyleSheet.create({
     width: 420,
     height: 250,
     resizeMode: 'contain',
-    marginBottom: 24,
   },
   title: {
     fontSize: 32,
@@ -244,10 +269,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
   },
   buttonText: {
-    color: '#111',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#f0dada',
+    opacity: 0.3,
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: '#f0dada',
+    fontSize: 14,
+    fontWeight: '500',
   },
   registerContainer: {
     flexDirection: 'row',

@@ -1,3 +1,4 @@
+import GoogleButton from '@/components/GoogleButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -16,14 +17,11 @@ import {
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
-  const [firebaseUid, setFirebaseUid] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
-
-  // NOTE: We'll POST to the backend only after successful Firebase signup
+  const { signUp, signInWithGoogle } = useAuth();
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -44,17 +42,19 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       const createdUser = await signUp(email, password, name.trim());
-      const uid = createdUser?.uid || '';
-      setFirebaseUid(uid);
 
-      // Post to backend with firebase UID
+      // Guardar usuario en MongoDB
       try {
         const resp = await fetch('http://localhost:3000/api/users', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ firebaseUid: uid, email, displayName: name }),
+          body: JSON.stringify({ 
+            firebaseUid: createdUser.uid, 
+            email: createdUser.email, 
+            displayName: name.trim() 
+          }),
         });
 
         if (!resp.ok) {
@@ -67,6 +67,7 @@ export default function RegisterScreen() {
       } catch (postErr) {
         console.error('Error posting user to backend:', postErr);
       }
+
       Alert.alert(
         '¡Éxito!', 
         'Cuenta creada correctamente. Ya puedes iniciar sesión.',
@@ -100,6 +101,19 @@ export default function RegisterScreen() {
     }
   };
 
+  const handleGoogleRegister = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      Alert.alert('Error', 'No se pudo registrar con Google');
+      console.error('Google register error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const goToLogin = () => {
     router.push('/login');
   };
@@ -111,7 +125,7 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.formContainer}>
-          <Image source={require('@/assets/images/Marvel-Logo-PNG-Cutout.png')} style={styles.logo} />
+          <Image source={require('@/assets/images/MarvelLogo.png')} style={styles.logo} />
           <Text style={styles.title}>Crear Cuenta</Text>
           <Text style={styles.subtitle}>Únete a The Marvel Project</Text>
 
@@ -173,6 +187,18 @@ export default function RegisterScreen() {
             </Text>
           </TouchableOpacity>
 
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>O continúa con</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <GoogleButton 
+            onPress={handleGoogleRegister}
+            disabled={loading}
+            text="Continuar con Google"
+          />
+
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
             <TouchableOpacity onPress={goToLogin}>
@@ -194,11 +220,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
+    alignItems: 'center',
   },
   formContainer: {
     backgroundColor: 'transparent', // keep form visually merged with background
     borderRadius: 20,
-    padding: 30,
+    padding: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -207,6 +234,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    maxWidth: 400,
   },
   title: {
     fontSize: 28,
@@ -254,9 +282,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#8f8f8f',
   },
   buttonText: {
-    color: '#111',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#f0dada',
+    opacity: 0.3,
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: '#f0dada',
+    fontSize: 14,
   },
   loginContainer: {
     flexDirection: 'row',
@@ -277,6 +321,5 @@ const styles = StyleSheet.create({
     height: 300,
     resizeMode: 'contain',
     alignSelf: 'center',
-    marginBottom: 12,
   },
 });
