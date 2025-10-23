@@ -66,52 +66,67 @@ export default function LoginScreen() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.formContainer}>
-          <Image source={require('@/assets/images/Marvel-Logo-PNG-Cutout.png')} style={styles.logo} />
-          <Text style={styles.title}>Iniciar Sesión</Text>
-          <Text style={styles.subtitle}>Bienvenido de vuelta</Text>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="tu@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.contentWrapper}>
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <Image source={require('@/assets/images/MarvelLogo.png')} style={styles.logo} />
+            <Text style={styles.title}>Iniciar Sesión</Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Contraseña</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Tu contraseña"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
+          {/* Form Section */}
+          <View style={styles.formSection}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="tu@email.com"
+                placeholderTextColor="#a0a0a0"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-            </Text>
-          </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Contraseña</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Tu contraseña"
+                placeholderTextColor="#a0a0a0"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+            </View>
 
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>¿No tienes cuenta? </Text>
-            <TouchableOpacity onPress={goToRegister}>
-              <Text style={styles.registerLink}>Regístrate</Text>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              </Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Footer Section */}
+          <View style={styles.footerSection}>
+            <View style={styles.registerContainer}>
+              <Text style={styles.registerText}>¿No tienes cuenta? </Text>
+              <TouchableOpacity onPress={goToRegister} activeOpacity={0.7}>
+                <Text style={styles.registerLink}>Regístrate</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -127,90 +142,127 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
   },
-  formContainer: {
-    backgroundColor: 'transparent',
-    borderRadius: 20,
-    padding: 30,
+  contentWrapper: {
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  formSection: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 24,
+    padding: 32,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  footerSection: {
+    alignItems: 'center',
+  },
+  logo: {
+    width: 420,
+    height: 250,
+    resizeMode: 'contain',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+    color: '#ffffff',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#e8bdbd',
+    fontWeight: '400',
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#f0dada',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    fontSize: 16,
+    backgroundColor: '#3f1515',
+    color: '#ffffff',
+    fontWeight: '400',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-    color: '#fff',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#e8bdbd',
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#f0dada',
-  },
-  input: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-    borderRadius: 25,
-    padding: 15,
-    fontSize: 16,
-    backgroundColor: '#3f1515',
-    color: '#fff',
+    shadowRadius: 4,
+    elevation: 2,
   },
   button: {
     backgroundColor: '#b96b6b',
-    borderRadius: 25,
-    padding: 15,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
+    marginTop: 8,
+    shadowColor: '#b96b6b',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   buttonDisabled: {
     backgroundColor: '#8f8f8f',
+    shadowOpacity: 0.1,
   },
   buttonText: {
     color: '#111',
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
   registerContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
   },
   registerText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#f0dada',
+    fontWeight: '400',
   },
   registerLink: {
-    fontSize: 16,
-    color: '#fff',
+    fontSize: 15,
+    color: '#ffffff',
     fontWeight: '700',
-  },
-  logo: {
-    width: 420,
-    height: 300,
-    resizeMode: 'contain',
-    alignSelf: 'center',
-    marginBottom: 12,
+    marginLeft: 4,
   },
 });
