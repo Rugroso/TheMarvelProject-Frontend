@@ -44,8 +44,11 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchCharacters();
+    if (user && user.uid) {
+      fetchUserFavorites();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   const fetchCharacters = async () => {
     setLoadingChars(true);
@@ -91,6 +94,36 @@ export default function HomeScreen() {
     }
   };
 
+  const fetchUserFavorites = async () => {
+    if (!user || !user.uid) return;
+    
+    try {
+      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+      console.log('Fetching user favorites for uid:', user.uid);
+      
+      const response = await fetch(`${url}/users/${user.uid}/favorites`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('User favorites response:', data);
+        
+        // Extraer los marvelId de los personajes favoritos
+        const favoriteIds = data.favorites?.map((fav: any) => fav.marvelId) || [];
+        console.log('Setting favorite IDs:', favoriteIds);
+        setFavorites(favoriteIds);
+      } else if (response.status === 404) {
+        // Usuario no encontrado, pero no es un error crítico
+        console.log('User not found in backend, starting with empty favorites');
+        setFavorites([]);
+      } else {
+        console.error('Error fetching favorites:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching user favorites:', error);
+      // No mostramos alert aquí para no molestar al usuario, solo logueamos
+    }
+  };
+
   const toggleFavorite = async (char: any) => {
     const id = char.id as number;
     let updated: number[];
@@ -104,7 +137,8 @@ export default function HomeScreen() {
     // If user is authenticated, try to save favorite in backend
     if (user && user.uid) {
       try {
-        await fetch(`http://localhost:3000/api/users/${user.uid}/favorites`, {
+        const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+        await fetch(`${url}/users/${user.uid}/favorites`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ characterId: id, name: char.name, thumbnail: `${char.thumbnail.path}.${char.thumbnail.extension}` }),
