@@ -6,6 +6,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Modal,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -22,6 +23,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [selected, setSelected] = useState<any | null>(null);
 
   useEffect(() => {
     if (user && user.uid) {
@@ -66,12 +68,19 @@ export default function ProfileScreen() {
     }
   };
 
+  const openCharacter = (char: any) => {
+    setSelected(char);
+  };
+
+  const closeModal = () => setSelected(null);
+
   const renderFavoriteItem = ({ item }: { item: any }) => {
     const thumb = item.thumbnail?.replace('http://', 'https://') || '';
     
     return (
       <TouchableOpacity 
         style={styles.favoriteCard} 
+        onPress={() => openCharacter(item)}
         activeOpacity={0.8}
       >
         <View style={styles.favoriteCardContent}>
@@ -156,6 +165,34 @@ export default function ProfileScreen() {
           </View>
         )}
       </View>
+
+      <Modal visible={!!selected} animationType="fade" onRequestClose={closeModal}>
+        <SafeAreaView style={styles.modalContainer}>
+          {selected && (
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.modalImageContainer}>
+                <Image 
+                  source={{ uri: selected.thumbnail?.replace('http://', 'https://') || '' }} 
+                  style={styles.modalImage} 
+                />
+              </View>
+              
+              <View style={styles.modalInfo}>
+                <Text style={styles.modalName}>{selected.name}</Text>
+                <Text style={styles.modalDesc}>
+                  {selected.description || 'Sin descripción disponible para este personaje.'}
+                </Text>
+              </View>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -400,5 +437,89 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#e8bdbd',
     textAlign: 'center',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#5a1f1f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: isLargeDesktop ? 40 : isDesktop ? 20 : 16,
+  },
+  modalContent: {
+    backgroundColor: '#3f1515',
+    borderRadius: 24,
+    padding: isLargeDesktop ? 40 : isDesktop ? 32 : 24,
+    maxWidth: isLargeDesktop ? 600 : isDesktop ? 500 : 400,
+    width: '100%',
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 20,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 30,
+    elevation: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 24,
+  },
+  closeButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  closeButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalImageContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+    position: 'relative',
+  },
+  modalImage: {
+    width: isLargeDesktop ? 300 : isDesktop ? 250 : 200,
+    height: isLargeDesktop ? 300 : isDesktop ? 250 : 200,
+    resizeMode: 'cover',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalInfo: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  modalName: {
+    fontSize: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 16,
+    letterSpacing: -0.5,
+    lineHeight: isLargeDesktop ? 38 : isDesktop ? 34 : 30,
+  },
+  modalDesc: {
+    fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    color: '#f0dada',
+    lineHeight: isLargeDesktop ? 28 : isDesktop ? 24 : 20,
+    textAlign: 'center',
+    paddingHorizontal: 16,
   },
 });

@@ -134,7 +134,12 @@ export default function HomeScreen() {
         await fetch(`${url}/users/${user.uid}/favorites`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ characterId: id, name: char.name, thumbnail: `${char.thumbnail.path}.${char.thumbnail.extension}` }),
+          body: JSON.stringify({ 
+            characterId: id, 
+            name: char.name, 
+            thumbnail: `${char.thumbnail.path}.${char.thumbnail.extension}`,
+            description: char.description || ''
+          }),
         });
       } catch (err) {
         console.error('Error saving favorite to backend', err);
