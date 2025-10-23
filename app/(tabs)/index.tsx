@@ -34,13 +34,6 @@ export default function HomeScreen() {
   const [selected, setSelected] = useState<any | null>(null);
   const [favorites, setFavorites] = useState<number[]>([]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo cerrar la sesión');
-    }
-  };
 
   useEffect(() => {
     fetchCharacters();
@@ -189,21 +182,18 @@ export default function HomeScreen() {
       {/* Header Section */}
       <View style={styles.headerSection}>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Marvel Universe</Text>
-          <Text style={styles.headerSubtitle}>Explora el universo de Marvel</Text>
+          <Image 
+            source={require('@/assets/images/MarvelLogo.png')} 
+            style={styles.marvelLogo}
+            resizeMode="contain"
+          />
         </View>
-        {user && (
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Characters Section */}
       <View style={styles.charactersSection}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Personajes</Text>
-          <Text style={styles.sectionSubtitle}>Descubre tus héroes favoritos</Text>
         </View>
         
         {loadingChars ? (
@@ -302,39 +292,12 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'center',
+    paddingVertical: 20,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 4,
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#e8bdbd',
-    fontWeight: '400',
-  },
-  logoutButton: {
-    backgroundColor: '#b96b6b',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignSelf: 'center',
-    shadowColor: '#b96b6b',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  logoutButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
+  marvelLogo: {
+    width: isLargeDesktop ? 520 : isDesktop ? 440 : isTablet ? 350 : 320,
+    height: isLargeDesktop ? 170 : isDesktop ? 140 : isTablet ? 110 : 100,
   },
   charactersSection: {
     flex: 1,

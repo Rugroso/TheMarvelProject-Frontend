@@ -1,0 +1,404 @@
+import { useAuth } from '@/contexts/AuthContext';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+
+const { width: screenWidth } = Dimensions.get('window');
+const isTablet = screenWidth >= 768;
+const isDesktop = screenWidth >= 1024;
+const isLargeDesktop = screenWidth >= 1440;
+
+export default function ProfileScreen() {
+  const { user, logout } = useAuth();
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+
+  useEffect(() => {
+    if (user && user.uid) {
+      fetchUserFavorites();
+    }
+  }, [user]);
+
+  const fetchUserFavorites = async () => {
+    if (!user || !user.uid) return;
+    
+    setLoadingFavorites(true);
+    try {
+      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+      console.log('Fetching user favorites for uid:', user.uid);
+      
+      const response = await fetch(`${url}/users/${user.uid}/favorites`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('User favorites response:', data);
+        setFavorites(data.favorites || []);
+      } else if (response.status === 404) {
+        console.log('User not found in backend, starting with empty favorites');
+        setFavorites([]);
+      } else {
+        console.error('Error fetching favorites:', response.status);
+        Alert.alert('Error', 'No se pudieron cargar los favoritos');
+      }
+    } catch (error) {
+      console.error('Error fetching user favorites:', error);
+      Alert.alert('Error', 'No se pudieron cargar los favoritos');
+    } finally {
+      setLoadingFavorites(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo cerrar la sesión');
+    }
+  };
+
+  const renderFavoriteItem = ({ item }: { item: any }) => {
+    const thumb = item.thumbnail?.replace('http://', 'https://') || '';
+    
+    return (
+      <TouchableOpacity 
+        style={styles.favoriteCard} 
+        activeOpacity={0.8}
+      >
+        <View style={styles.favoriteCardContent}>
+          <View style={styles.favoriteCardImageContainer}>
+            <Image source={{ uri: thumb }} style={styles.favoriteImage} />
+          </View>
+          <Text style={styles.favoriteName} numberOfLines={2}>{item.name}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.headerSection}>
+          <Text style={styles.headerTitle}>Perfil</Text>
+          <Text style={styles.headerSubtitle}>Inicia sesión para ver tu perfil</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No has iniciado sesión</Text>
+          <Text style={styles.emptySubtitle}>Inicia sesión para acceder a tu perfil y favoritos</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.headerSection}>
+        <View style={styles.headerContent}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          </View>
+          <Text style={styles.headerTitle}>
+            {user.displayName || user.email?.split('@')[0] || 'Usuario'}
+          </Text>
+          <Text style={styles.headerSubtitle}>{user.email}</Text>
+        </View>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.statsSection}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{favorites.length}</Text>
+          <Text style={styles.statLabel}>Favoritos</Text>
+        </View>
+      </View>
+
+      <View style={styles.favoritesSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Mis Favoritos</Text>
+          <Text style={styles.sectionSubtitle}>Personajes que te gustan</Text>
+        </View>
+        
+        {loadingFavorites ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#dc2626" />
+            <Text style={styles.loadingText}>Cargando favoritos...</Text>
+          </View>
+        ) : favorites.length > 0 ? (
+          <View style={styles.favoritesList}>
+            <FlatList
+              data={favorites}
+              keyExtractor={(item) => String(item.marvelId || item.id)}
+              renderItem={renderFavoriteItem}
+              numColumns={isLargeDesktop ? 3 : isDesktop ? 2 : 1}
+              columnWrapperStyle={isLargeDesktop || isDesktop ? styles.favoritesRow : undefined}
+              contentContainerStyle={styles.favoritesContent}
+              showsVerticalScrollIndicator={false}
+              style={styles.favoritesFlatList}
+            />
+          </View>
+        ) : (
+          <View style={styles.emptyFavoritesContainer}>
+            <Text style={styles.emptyFavoritesTitle}>No tienes favoritos aún</Text>
+            <Text style={styles.emptyFavoritesSubtitle}>Explora personajes y agrega tus favoritos</Text>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#5a1f1f',
+  },
+  headerSection: {
+    backgroundColor: '#3f1515',
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  headerContent: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarContainer: {
+    width: isLargeDesktop ? 120 : isDesktop ? 100 : 80,
+    height: isLargeDesktop ? 120 : isDesktop ? 100 : 80,
+    borderRadius: isLargeDesktop ? 60 : isDesktop ? 50 : 40,
+    backgroundColor: '#b96b6b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#b96b6b',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  avatarText: {
+    fontSize: isLargeDesktop ? 48 : isDesktop ? 40 : 32,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  headerTitle: {
+    fontSize: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 4,
+    letterSpacing: -0.5,
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    color: '#e8bdbd',
+    fontWeight: '400',
+    textAlign: 'center',
+  },
+  logoutButton: {
+    backgroundColor: '#b96b6b',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignSelf: 'center',
+    shadowColor: '#b96b6b',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  logoutButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  statsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    backgroundColor: '#3f1515',
+    marginHorizontal: 16,
+    marginTop: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  statCard: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: isLargeDesktop ? 16 : isDesktop ? 14 : 12,
+    color: '#e8bdbd',
+    fontWeight: '500',
+  },
+  favoritesSection: {
+    flex: 1,
+    backgroundColor: '#5a1f1f',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: isLargeDesktop ? 28 : isDesktop ? 24 : 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    color: '#e8bdbd',
+    fontWeight: '400',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    color: '#f0dada',
+    fontSize: 16,
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#e8bdbd',
+    textAlign: 'center',
+  },
+  favoritesList: {
+    flex: 1,
+  },
+  favoritesFlatList: {
+    flex: 1,
+  },
+  favoritesContent: {
+    paddingBottom: 20,
+    alignItems: 'center',
+    paddingHorizontal: isLargeDesktop ? 40 : isDesktop ? 20 : 16,
+  },
+  favoritesRow: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: isLargeDesktop ? 16 : 12,
+  },
+  favoriteCard: {
+    backgroundColor: '#3f1515',
+    borderRadius: 16,
+    marginVertical: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    width: isLargeDesktop ? 300 : isDesktop ? 280 : isTablet ? 250 : 280,
+    maxWidth: '90%',
+    marginHorizontal: isLargeDesktop || isDesktop ? 8 : 0,
+  },
+  favoriteCardContent: {
+    alignItems: 'center',
+    paddingBottom: 16,
+  },
+  favoriteCardImageContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingHorizontal: 16,
+  },
+  favoriteImage: {
+    width: isLargeDesktop ? 220 : isDesktop ? 200 : isTablet ? 180 : 200,
+    height: isLargeDesktop ? 220 : isDesktop ? 200 : isTablet ? 180 : 200,
+    resizeMode: 'cover',
+    borderRadius: 12,
+  },
+  favoriteName: {
+    color: '#ffffff',
+    fontSize: isLargeDesktop ? 20 : isDesktop ? 18 : isTablet ? 16 : 18,
+    fontWeight: '700',
+    lineHeight: isLargeDesktop ? 24 : isDesktop ? 22 : isTablet ? 20 : 22,
+    textAlign: 'center',
+    marginTop: 12,
+    paddingHorizontal: 16,
+  },
+  emptyFavoritesContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyFavoritesTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyFavoritesSubtitle: {
+    fontSize: 16,
+    color: '#e8bdbd',
+    textAlign: 'center',
+  },
+});
