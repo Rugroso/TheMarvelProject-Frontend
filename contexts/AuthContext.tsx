@@ -53,7 +53,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Función helper para guardar usuario en MongoDB
   const saveUserToBackend = async (firebaseUser: User) => {
     try {
-      const response = await fetch('http://localhost:3000/api/users', {
+      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const response = await fetch(`${url}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

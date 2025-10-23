@@ -42,10 +42,10 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       const createdUser = await signUp(email, password, name.trim());
-
+      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
       // Guardar usuario en MongoDB
       try {
-        const resp = await fetch('http://localhost:3000/api/users', {
+        const resp = await fetch(`${url}/users`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -8,11 +8,16 @@
     "scheme": "themarvelproject",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "linking": {
+      "scheme": "themarvelproject",
+      "prefixes": ["themarvelproject://"]
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.abrahamsaldivar.themarvelproject"
     },
     "android": {
+      "package": "com.abrahamsaldivar.themarvelproject",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
