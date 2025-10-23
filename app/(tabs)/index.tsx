@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
   Image,
   Modal,
@@ -10,7 +11,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 // Marvel API credentials
@@ -18,6 +19,12 @@ const MARVEL_URL = 'https://gateway.marvel.com/v1/public/characters';
 const MARVEL_TS = '1';
 const MARVEL_APIKEY = 'd5e356c85bb594407d07eac736318b24';
 const MARVEL_HASH = '1ee668e3d9c6814d050a917c175af06c';
+
+// Responsive breakpoints
+const { width: screenWidth } = Dimensions.get('window');
+const isTablet = screenWidth >= 768;
+const isDesktop = screenWidth >= 1024;
+const isLargeDesktop = screenWidth >= 1440;
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -176,6 +183,8 @@ export default function HomeScreen() {
               data={characters}
               keyExtractor={(item) => String(item.id)}
               renderItem={renderItem}
+              numColumns={isLargeDesktop ? 3 : isDesktop ? 2 : 1}
+              columnWrapperStyle={isLargeDesktop || isDesktop ? styles.row : undefined}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               style={styles.flatList}
@@ -372,6 +381,12 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 20,
     alignItems: 'center',
+    paddingHorizontal: isLargeDesktop ? 40 : isDesktop ? 20 : 16,
+  },
+  row: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: isLargeDesktop ? 16 : 12,
   },
   card: {
     backgroundColor: '#2a2a2a',
@@ -388,8 +403,9 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    width: 280,
+    width: isLargeDesktop ? 300 : isDesktop ? 280 : isTablet ? 250 : 280,
     maxWidth: '90%',
+    marginHorizontal: isLargeDesktop || isDesktop ? 8 : 0,
   },
   cardImageContainer: {
     position: 'relative',
@@ -398,19 +414,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   charImage: {
-    width: 200,
-    height: 200,
+    width: isLargeDesktop ? 220 : isDesktop ? 200 : isTablet ? 180 : 200,
+    height: isLargeDesktop ? 220 : isDesktop ? 200 : isTablet ? 180 : 200,
     resizeMode: 'cover',
     borderRadius: 12,
   },
   favButton: {
     position: 'absolute',
-    top: 24,
-    right: 24,
+    top: isLargeDesktop ? 28 : isDesktop ? 24 : isTablet ? 20 : 24,
+    right: isLargeDesktop ? 28 : isDesktop ? 24 : isTablet ? 20 : 24,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 20,
-    width: 36,
-    height: 36,
+    width: isLargeDesktop ? 42 : isDesktop ? 40 : isTablet ? 36 : 40,
+    height: isLargeDesktop ? 42 : isDesktop ? 40 : isTablet ? 36 : 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -429,9 +445,9 @@ const styles = StyleSheet.create({
   },
   charName: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: isLargeDesktop ? 20 : isDesktop ? 18 : isTablet ? 16 : 18,
     fontWeight: '700',
-    lineHeight: 22,
+    lineHeight: isLargeDesktop ? 24 : isDesktop ? 22 : isTablet ? 20 : 22,
     textAlign: 'center',
     marginTop: 12,
     paddingHorizontal: 16,
