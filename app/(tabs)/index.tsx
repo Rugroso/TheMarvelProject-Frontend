@@ -119,33 +119,58 @@ export default function HomeScreen() {
 
   const toggleFavorite = async (char: any) => {
     const id = char.id as number;
+    const isFavorite = favorites.includes(id);
     let updated: number[];
-    if (favorites.includes(id)) {
+    
+    if (isFavorite) {
       updated = favorites.filter((f) => f !== id);
     } else {
       updated = [...favorites, id];
     }
     setFavorites(updated);
 
-    // If user is authenticated, try to save favorite in backend
+    // If user is authenticated, try to save/remove favorite in backend
     if (user && user.uid) {
       try {
         const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
-        await fetch(`${url}/users/${user.uid}/favorites`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            characterId: id, 
-            name: char.name, 
-            thumbnail: `${char.thumbnail.path}.${char.thumbnail.extension}`,
-            description: char.description || ''
-          }),
-        });
+        
+        if (isFavorite) {
+          // Remove from favorites
+          const response = await fetch(`${url}/users/${user.uid}/favorites/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          
+          if (response.ok) {
+            Alert.alert('Éxito', 'Favorito eliminado correctamente');
+          } else {
+            console.error('Error removing favorite:', response.status);
+            Alert.alert('Error', 'No se pudo eliminar el favorito');
+            // Revert local state on error
+            setFavorites(favorites);
+          }
+        } else {
+          // Add to favorites
+          await fetch(`${url}/users/${user.uid}/favorites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              characterId: id, 
+              name: char.name, 
+              thumbnail: `${char.thumbnail.path}.${char.thumbnail.extension}`,
+              description: char.description || ''
+            }),
+          });
+        }
       } catch (err) {
-        console.error('Error saving favorite to backend', err);
+        console.error('Error with favorite operation:', err);
+        // Revert local state on error
+        setFavorites(favorites);
+        Alert.alert('Error', 'No se pudo realizar la operación');
       }
     }
   };
+
 
   const openCharacter = (char: any) => {
     setSelected(char);
@@ -172,7 +197,7 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.favButtonText, isFavorite && styles.favButtonTextActive]}>
-                {isFavorite ? '❤️' : '🤍'}
+                {isFavorite ? '🌟' : '⭐️'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -257,15 +282,18 @@ export default function HomeScreen() {
               </View>
               
               <View style={styles.modalActions}>
-                <TouchableOpacity 
-                  style={[styles.favAction, favorites.includes(selected.id) && styles.favActionActive]} 
-                  onPress={() => toggleFavorite(selected)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.favActionText, favorites.includes(selected.id) && styles.favActionTextActive]}>
-                    {favorites.includes(selected.id) ? '❤️ Quitar de favoritos' : '🤍 Agregar a favoritos'}
-                  </Text>
-                </TouchableOpacity>
+                {/* Quitar botón de eliminar favorito dentro del modal, solo mostrar acción para agregar */}
+                {!favorites.includes(selected.id) && (
+                  <TouchableOpacity 
+                    style={styles.favAction}
+                    onPress={() => toggleFavorite(selected)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.favActionText}>
+                      {'Agregar a favoritos'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           )}

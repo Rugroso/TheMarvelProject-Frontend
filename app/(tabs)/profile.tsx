@@ -74,6 +74,36 @@ export default function ProfileScreen() {
 
   const closeModal = () => setSelected(null);
 
+  const handleRemoveFavorite = async (character: any) => {
+    if (!user || !user.uid) return;
+
+    try {
+      const marvelId = character.marvelId || character.id;
+      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+      
+      const response = await fetch(`${url}/users/${user.uid}/favorites/${marvelId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        // Actualizar la lista local de favoritos
+        setFavorites(prevFavorites => 
+          prevFavorites.filter(fav => (fav.marvelId || fav.id) !== marvelId)
+        );
+        
+        Alert.alert('Éxito', 'Favorito eliminado correctamente');
+        closeModal();
+      } else {
+        console.error('Error removing favorite:', response.status);
+        Alert.alert('Error', 'No se pudo eliminar el favorito');
+      }
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+      Alert.alert('Error', 'No se pudo eliminar el favorito');
+    }
+  };
+
   const renderFavoriteItem = ({ item }: { item: any }) => {
     const thumb = item.thumbnail?.replace('http://', 'https://') || '';
     
@@ -188,6 +218,16 @@ export default function ProfileScreen() {
                 <Text style={styles.modalDesc}>
                   {selected.description || 'Sin descripción disponible para este personaje.'}
                 </Text>
+              </View>
+              
+              <View style={styles.modalActions}>
+                <TouchableOpacity 
+                  style={styles.removeButton} 
+                  onPress={() => handleRemoveFavorite(selected)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.removeButtonText}>Eliminar de favoritos</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -521,5 +561,32 @@ const styles = StyleSheet.create({
     lineHeight: isLargeDesktop ? 28 : isDesktop ? 24 : 20,
     textAlign: 'center',
     paddingHorizontal: 16,
+  },
+  modalActions: {
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  removeButton: {
+    backgroundColor: '#dc2626',
+    paddingVertical: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    paddingHorizontal: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#dc2626',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.3)',
+  },
+  removeButtonText: {
+    color: '#ffffff',
+    fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
