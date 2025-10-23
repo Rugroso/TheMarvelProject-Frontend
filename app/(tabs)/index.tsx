@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,7 +18,7 @@ import {
 const MARVEL_URL = 'https://gateway.marvel.com/v1/public/characters';
 const MARVEL_TS = '1';
 const MARVEL_APIKEY = 'd5e356c85bb594407d07eac736318b24';
-const MARVEL_HASH = '1ee668e3d9c6814d050a917c175af06c1';
+const MARVEL_HASH = '1ee668e3d9c6814d050a917c175af06c';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -27,30 +28,17 @@ export default function HomeScreen() {
   const [selected, setSelected] = useState<any | null>(null);
   const [favorites, setFavorites] = useState<number[]>([]);
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo cerrar la sesión');
-            }
-          },
-        },
-      ]
-    );
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setTimeout(() => {
+        router.push('/login');
+      }, 100);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo cerrar la sesión');
+    }
   };
-
+  
   useEffect(() => {
     fetchCharacters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,21 +131,6 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       {user && (
         <View style={styles.userContainer}>
-          <Text style={styles.welcomeText}>¡Bienvenido, {user.displayName || 'Usuario'}!</Text>
-          <View style={styles.userInfoContainer}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Nombre:</Text>
-              <Text style={styles.infoValue}>{user.displayName || 'No especificado'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>ID:</Text>
-              <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="middle">{user.uid}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Correo:</Text>
-              <Text style={styles.infoValue}>{user.email}</Text>
-            </View>
-          </View>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
           </TouchableOpacity>
