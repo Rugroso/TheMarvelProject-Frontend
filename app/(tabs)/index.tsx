@@ -203,7 +203,7 @@ export default function HomeScreen() {
         )}
       </View>
 
-      <Modal visible={!!selected} animationType="slide" onRequestClose={closeModal}>
+      <Modal visible={!!selected} animationType="fade" onRequestClose={closeModal}>
         <SafeAreaView style={styles.modalContainer}>
           {selected && (
             <View style={styles.modalContent}>
@@ -455,15 +455,32 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: '#1a1a1a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: isLargeDesktop ? 40 : isDesktop ? 20 : 16,
   },
   modalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 24,
+    padding: isLargeDesktop ? 40 : isDesktop ? 32 : 24,
+    maxWidth: isLargeDesktop ? 600 : isDesktop ? 500 : 400,
+    width: '100%',
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 20,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 30,
+    elevation: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingVertical: 20,
+    marginBottom: 24,
   },
   closeButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -472,6 +489,8 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   closeButtonText: {
     color: '#ffffff',
@@ -480,56 +499,72 @@ const styles = StyleSheet.create({
   },
   modalImageContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
+    position: 'relative',
   },
   modalImage: {
-    width: 200,
-    height: 200,
+    width: isLargeDesktop ? 300 : isDesktop ? 250 : 200,
+    height: isLargeDesktop ? 300 : isDesktop ? 250 : 200,
     resizeMode: 'cover',
-    borderRadius: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   modalInfo: {
     marginBottom: 32,
+    alignItems: 'center',
   },
   modalName: {
-    fontSize: 28,
+    fontSize: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
     fontWeight: '800',
     color: '#ffffff',
     textAlign: 'center',
     marginBottom: 16,
     letterSpacing: -0.5,
+    lineHeight: isLargeDesktop ? 38 : isDesktop ? 34 : 30,
   },
   modalDesc: {
-    fontSize: 16,
+    fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
     color: '#e0e0e0',
-    lineHeight: 24,
+    lineHeight: isLargeDesktop ? 28 : isDesktop ? 24 : 20,
     textAlign: 'center',
+    paddingHorizontal: 16,
   },
   modalActions: {
-    paddingBottom: 20,
+    alignItems: 'center',
   },
   favAction: {
     backgroundColor: '#dc2626',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
+    paddingVertical: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    paddingHorizontal: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
+    borderRadius: 20,
     alignItems: 'center',
     shadowColor: '#dc2626',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 6,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.3)',
   },
   favActionActive: {
     backgroundColor: '#6b7280',
+    borderColor: 'rgba(107, 114, 128, 0.3)',
   },
   favActionText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   favActionTextActive: {
     color: '#ffffff',
