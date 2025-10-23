@@ -44,11 +44,8 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchCharacters();
-    if (user && user.uid) {
-      fetchUserFavorites();
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, []);
 
   const fetchCharacters = async () => {
     setLoadingChars(true);
@@ -94,36 +91,6 @@ export default function HomeScreen() {
     }
   };
 
-  const fetchUserFavorites = async () => {
-    if (!user || !user.uid) return;
-    
-    try {
-      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
-      console.log('Fetching user favorites for uid:', user.uid);
-      
-      const response = await fetch(`${url}/users/${user.uid}/favorites`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User favorites response:', data);
-        
-        // Extraer los marvelId de los personajes favoritos
-        const favoriteIds = data.favorites?.map((fav: any) => fav.marvelId) || [];
-        console.log('Setting favorite IDs:', favoriteIds);
-        setFavorites(favoriteIds);
-      } else if (response.status === 404) {
-        // Usuario no encontrado, pero no es un error crítico
-        console.log('User not found in backend, starting with empty favorites');
-        setFavorites([]);
-      } else {
-        console.error('Error fetching favorites:', response.status);
-      }
-    } catch (error) {
-      console.error('Error fetching user favorites:', error);
-      // No mostramos alert aquí para no molestar al usuario, solo logueamos
-    }
-  };
-
   const toggleFavorite = async (char: any) => {
     const id = char.id as number;
     let updated: number[];
@@ -137,8 +104,7 @@ export default function HomeScreen() {
     // If user is authenticated, try to save favorite in backend
     if (user && user.uid) {
       try {
-        const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
-        await fetch(`${url}/users/${user.uid}/favorites`, {
+        await fetch(`http://localhost:3000/api/users/${user.uid}/favorites`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ characterId: id, name: char.name, thumbnail: `${char.thumbnail.path}.${char.thumbnail.extension}` }),
@@ -283,10 +249,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#5a1f1f',
   },
   headerSection: {
-    backgroundColor: '#5a1f1f',
+    backgroundColor: '#3f1515',
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderBottomLeftRadius: 24,
@@ -317,12 +283,12 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   logoutButton: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#b96b6b',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
     alignSelf: 'center',
-    shadowColor: '#dc2626',
+    shadowColor: '#b96b6b',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -338,7 +304,7 @@ const styles = StyleSheet.create({
   },
   charactersSection: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#5a1f1f',
     paddingHorizontal: 16,
     alignItems: 'center',
   },
@@ -354,7 +320,7 @@ const styles = StyleSheet.create({
   },
   sectionSubtitle: {
     fontSize: 16,
-    color: '#a0a0a0',
+    color: '#e8bdbd',
     fontWeight: '400',
   },
   loadingContainer: {
@@ -364,7 +330,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    color: '#ffffff',
+    color: '#f0dada',
     fontSize: 16,
     marginTop: 12,
     fontWeight: '500',
@@ -384,12 +350,12 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#a0a0a0',
+    color: '#e8bdbd',
     marginBottom: 24,
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#b96b6b',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -400,7 +366,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   debugText: {
-    color: '#a0a0a0',
+    color: '#e8bdbd',
     fontSize: 12,
     marginVertical: 4,
   },
@@ -423,7 +389,7 @@ const styles = StyleSheet.create({
     gap: isLargeDesktop ? 16 : 12,
   },
   card: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#3f1515',
     borderRadius: 16,
     marginVertical: 12,
     overflow: 'hidden',
@@ -436,7 +402,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     width: isLargeDesktop ? 300 : isDesktop ? 280 : isTablet ? 250 : 280,
     maxWidth: '90%',
     marginHorizontal: isLargeDesktop || isDesktop ? 8 : 0,
@@ -465,7 +431,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   favButtonActive: {
-    backgroundColor: 'rgba(220, 38, 38, 0.8)',
+    backgroundColor: 'rgba(185, 107, 107, 0.8)',
   },
   favButtonText: {
     fontSize: 16,
@@ -488,13 +454,13 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#5a1f1f',
     justifyContent: 'center',
     alignItems: 'center',
     padding: isLargeDesktop ? 40 : isDesktop ? 20 : 16,
   },
   modalContent: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#3f1515',
     borderRadius: 24,
     padding: isLargeDesktop ? 40 : isDesktop ? 32 : 24,
     maxWidth: isLargeDesktop ? 600 : isDesktop ? 500 : 400,
@@ -509,7 +475,7 @@ const styles = StyleSheet.create({
     shadowRadius: 30,
     elevation: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -565,7 +531,7 @@ const styles = StyleSheet.create({
   },
   modalDesc: {
     fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
-    color: '#e0e0e0',
+    color: '#f0dada',
     lineHeight: isLargeDesktop ? 28 : isDesktop ? 24 : 20,
     textAlign: 'center',
     paddingHorizontal: 16,
@@ -574,12 +540,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   favAction: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#b96b6b',
     paddingVertical: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
     paddingHorizontal: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
     borderRadius: 20,
     alignItems: 'center',
-    shadowColor: '#dc2626',
+    shadowColor: '#b96b6b',
     shadowOffset: {
       width: 0,
       height: 6,
@@ -588,11 +554,11 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.3)',
+    borderColor: 'rgba(185, 107, 107, 0.3)',
   },
   favActionActive: {
-    backgroundColor: '#6b7280',
-    borderColor: 'rgba(107, 114, 128, 0.3)',
+    backgroundColor: '#8f8f8f',
+    borderColor: 'rgba(143, 143, 143, 0.3)',
   },
   favActionText: {
     color: '#ffffff',
