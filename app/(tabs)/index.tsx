@@ -1,5 +1,4 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -31,14 +30,11 @@ export default function HomeScreen() {
   const handleLogout = async () => {
     try {
       await logout();
-      setTimeout(() => {
-        router.push('/login');
-      }, 100);
     } catch (error) {
       Alert.alert('Error', 'No se pudo cerrar la sesión');
     }
   };
-  
+
   useEffect(() => {
     fetchCharacters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
