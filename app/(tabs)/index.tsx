@@ -31,6 +31,7 @@ export default function HomeScreen() {
 
   const [characters, setCharacters] = useState<any[]>([]);
   const [loadingChars, setLoadingChars] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
   const [favorites, setFavorites] = useState<number[]>([]);
 
@@ -91,7 +92,7 @@ export default function HomeScreen() {
     if (!user || !user.uid) return;
     
     try {
-      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
       console.log('Fetching user favorites for uid:', user.uid);
       
       const response = await fetch(`${url}/users/${user.uid}/favorites`);
@@ -132,7 +133,7 @@ export default function HomeScreen() {
     // If user is authenticated, try to save/remove favorite in backend
     if (user && user.uid) {
       try {
-        const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+        const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
         
         if (isFavorite) {
           // Remove from favorites
@@ -141,26 +142,24 @@ export default function HomeScreen() {
             headers: { 'Content-Type': 'application/json' },
           });
           
-          if (response.ok) {
+          if (response.ok || response.status === 404) {
             Alert.alert('Éxito', 'Favorito eliminado correctamente');
           } else {
             console.error('Error removing favorite:', response.status);
             Alert.alert('Error', 'No se pudo eliminar el favorito');
-            // Revert local state on error
             setFavorites(favorites);
           }
         } else {
-          // Add to favorites
-          await fetch(`${url}/users/${user.uid}/favorites`, {
+          const addResponse = await fetch(`${url}/users/${user.uid}/favorites`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              characterId: id, 
-              name: char.name, 
-              thumbnail: `${char.thumbnail.path}.${char.thumbnail.extension}`,
-              description: char.description || ''
-            }),
+            body: JSON.stringify({ id }),
           });
+          if (!addResponse.ok && addResponse.status !== 409) {
+            console.error('Error adding favorite:', addResponse.status);
+            setFavorites(favorites);
+            Alert.alert('Error', 'No se pudo agregar a favoritos');
+          }
         }
       } catch (err) {
         console.error('Error with favorite operation:', err);
@@ -177,6 +176,20 @@ export default function HomeScreen() {
   };
 
   const closeModal = () => setSelected(null);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchCharacters(),
+        user && user.uid ? fetchUserFavorites() : Promise.resolve()
+      ]);
+    } catch (error) {
+      console.error('Error during refresh:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const renderItem = ({ item }: { item: any }) => {
     const thumb = `${item.thumbnail.path}.${item.thumbnail.extension}`.replace('http://', 'https://');
@@ -242,6 +255,8 @@ export default function HomeScreen() {
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               style={styles.flatList}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
             />
           </View>
         ) : (
@@ -311,7 +326,7 @@ const styles = StyleSheet.create({
   headerSection: {
     backgroundColor: '#3f1515',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 12,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     shadowColor: '#000',
@@ -326,11 +341,11 @@ const styles = StyleSheet.create({
   headerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: 8,
   },
   marvelLogo: {
-    width: isLargeDesktop ? 520 : isDesktop ? 440 : isTablet ? 350 : 320,
-    height: isLargeDesktop ? 170 : isDesktop ? 140 : isTablet ? 110 : 100,
+    width: isLargeDesktop ? 400 : isDesktop ? 350 : isTablet ? 280 : 250,
+    height: isLargeDesktop ? 130 : isDesktop ? 110 : isTablet ? 85 : 75,
   },
   charactersSection: {
     flex: 1,

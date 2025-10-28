@@ -23,7 +23,9 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
+  const columns = favorites.length > 1 ? (isLargeDesktop ? 3 : isDesktop ? 2 : 1) : 1;
 
   useEffect(() => {
     if (user && user.uid) {
@@ -36,7 +38,7 @@ export default function ProfileScreen() {
     
     setLoadingFavorites(true);
     try {
-      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
       console.log('Fetching user favorites for uid:', user.uid);
       
       const response = await fetch(`${url}/users/${user.uid}/favorites`);
@@ -74,12 +76,25 @@ export default function ProfileScreen() {
 
   const closeModal = () => setSelected(null);
 
+  const onRefresh = async () => {
+    if (!user || !user.uid) return;
+    
+    setRefreshing(true);
+    try {
+      await fetchUserFavorites();
+    } catch (error) {
+      console.error('Error during refresh:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleRemoveFavorite = async (character: any) => {
     if (!user || !user.uid) return;
 
     try {
       const marvelId = character.marvelId || character.id;
-      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
       
       const response = await fetch(`${url}/users/${user.uid}/favorites/${marvelId}`, {
         method: 'DELETE',
@@ -122,6 +137,8 @@ export default function ProfileScreen() {
       </TouchableOpacity>
     );
   };
+
+  // Usamos siempre FlatList para soportar pull-to-refresh incluso con 1 item
 
   if (!user) {
     return (
@@ -178,20 +195,37 @@ export default function ProfileScreen() {
         ) : favorites.length > 0 ? (
           <View style={styles.favoritesList}>
             <FlatList
+              key={`cols-${columns}`}
               data={favorites}
               keyExtractor={(item) => String(item.marvelId || item.id)}
               renderItem={renderFavoriteItem}
-              numColumns={isLargeDesktop ? 3 : isDesktop ? 2 : 1}
-              columnWrapperStyle={isLargeDesktop || isDesktop ? styles.favoritesRow : undefined}
+              numColumns={columns}
+              columnWrapperStyle={columns > 1 ? styles.favoritesRow : undefined}
               contentContainerStyle={styles.favoritesContent}
               showsVerticalScrollIndicator={false}
               style={styles.favoritesFlatList}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
             />
           </View>
         ) : (
-          <View style={styles.emptyFavoritesContainer}>
-            <Text style={styles.emptyFavoritesTitle}>No tienes favoritos aún</Text>
-            <Text style={styles.emptyFavoritesSubtitle}>Explora personajes y agrega tus favoritos</Text>
+          <View style={styles.favoritesList}>
+            <FlatList
+              data={[]}
+              keyExtractor={() => 'empty'}
+              renderItem={() => null}
+              contentContainerStyle={styles.emptyFavoritesContainer}
+              showsVerticalScrollIndicator={false}
+              style={styles.favoritesFlatList}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              ListEmptyComponent={
+                <View style={styles.emptyFavoritesContainer}>
+                  <Text style={styles.emptyFavoritesTitle}>No tienes favoritos aún</Text>
+                  <Text style={styles.emptyFavoritesSubtitle}>Explora personajes y agrega tus favoritos</Text>
+                </View>
+              }
+            />
           </View>
         )}
       </View>
@@ -245,7 +279,7 @@ const styles = StyleSheet.create({
   headerSection: {
     backgroundColor: '#3f1515',
     paddingHorizontal: 20,
-    paddingVertical: 30,
+    paddingVertical: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     shadowColor: '#000',
@@ -259,16 +293,16 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   avatarContainer: {
-    width: isLargeDesktop ? 120 : isDesktop ? 100 : 80,
-    height: isLargeDesktop ? 120 : isDesktop ? 100 : 80,
-    borderRadius: isLargeDesktop ? 60 : isDesktop ? 50 : 40,
+    width: isLargeDesktop ? 80 : isDesktop ? 70 : 60,
+    height: isLargeDesktop ? 80 : isDesktop ? 70 : 60,
+    borderRadius: isLargeDesktop ? 40 : isDesktop ? 35 : 30,
     backgroundColor: '#b96b6b',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     shadowColor: '#b96b6b',
     shadowOffset: {
       width: 0,
@@ -279,12 +313,12 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   avatarText: {
-    fontSize: isLargeDesktop ? 48 : isDesktop ? 40 : 32,
+    fontSize: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
     fontWeight: '800',
     color: '#ffffff',
   },
   headerTitle: {
-    fontSize: isLargeDesktop ? 32 : isDesktop ? 28 : 24,
+    fontSize: isLargeDesktop ? 24 : isDesktop ? 22 : 20,
     fontWeight: '800',
     color: '#ffffff',
     marginBottom: 4,
@@ -292,7 +326,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerSubtitle: {
-    fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    fontSize: isLargeDesktop ? 14 : isDesktop ? 13 : 12,
     color: '#e8bdbd',
     fontWeight: '400',
     textAlign: 'center',

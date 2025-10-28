@@ -42,7 +42,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       const createdUser = await signUp(email, password, name.trim());
-      const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
       // Guardar usuario en MongoDB
       try {
         const resp = await fetch(`${url}/users`, {
