@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -37,13 +38,47 @@ export default function HomeScreen() {
   const [selected, setSelected] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [allCharacters, setAllCharacters] = useState<any[]>([]);
+  const [searchCache, setSearchCache] = useState<Map<string, any[]>>(new Map());
+  const [characterIndex, setCharacterIndex] = useState<Map<string, any[]>>(new Map());
   
   const CHARACTERS_PER_PAGE = 30;
   const totalPages = Math.ceil(totalResults / CHARACTERS_PER_PAGE);
 
   useEffect(() => {
-    fetchCharacters(currentPage);
+    if (searchQuery.trim() === '') {
+      fetchCharacters(currentPage);
+    }
   }, [currentPage]);
+
+  useEffect(() => {
+    // Limpiar timeout anterior
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    if (searchQuery.trim() !== '') {
+      // Debounce reducido: esperar solo 200ms antes de buscar
+      const timeout = setTimeout(() => {
+        searchCharacters(searchQuery);
+      }, 200);
+      setSearchTimeout(timeout);
+    } else {
+      setSearchResults([]);
+      setIsSearching(false);
+    }
+
+    // Cleanup function
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchQuery]);
 
   const isValidCharacter = (char: any): boolean => {
     // Verificar que tenga nombre
@@ -121,6 +156,18 @@ export default function HomeScreen() {
         
         setCharacters(displayCharacters);
         setTotalResults(total);
+        
+        // Guardar todos los personajes válidos para búsqueda local
+        if (page === 1) {
+          setAllCharacters(validCharacters);
+          buildCharacterIndex(validCharacters);
+        } else {
+          setAllCharacters(prev => {
+            const newCharacters = [...prev, ...validCharacters];
+            buildCharacterIndex(newCharacters);
+            return newCharacters;
+          });
+        }
       }
     } catch (err) {
       console.error('Error fetching characters', err);
@@ -129,6 +176,209 @@ export default function HomeScreen() {
     } finally {
       setLoadingChars(false);
     }
+  };
+
+  const buildCharacterIndex = (characters: any[]) => {
+    const index = new Map<string, any[]>();
+    
+    characters.forEach(char => {
+      const name = char.name?.toLowerCase() || '';
+      
+      // Crear índices para cada palabra del nombre
+      const words = name.split(/[\s\-_]+/);
+      words.forEach((word: string) => {
+        if (word.length > 0) {
+          // Índice por palabra completa
+          if (!index.has(word)) {
+            index.set(word, []);
+          }
+          index.get(word)!.push(char);
+          
+          // Índice por prefijos de la palabra (para búsquedas parciales)
+          for (let i = 1; i <= word.length; i++) {
+            const prefix = word.substring(0, i);
+            if (!index.has(prefix)) {
+              index.set(prefix, []);
+            }
+            if (!index.get(prefix)!.includes(char)) {
+              index.get(prefix)!.push(char);
+            }
+          }
+        }
+      });
+    });
+    
+    setCharacterIndex(index);
+  };
+
+  const searchCharacters = async (query: string) => {
+    if (query.trim() === '') {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const normalizedQuery = query.toLowerCase().trim();
+    
+    // Verificar caché primero
+    if (searchCache.has(normalizedQuery)) {
+      console.log('Using cached search results for:', normalizedQuery);
+      setSearchResults(searchCache.get(normalizedQuery)!);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    console.log('Searching for:', query);
+    
+    try {
+      // Usar índice para búsqueda ultra-rápida
+      const indexedResults = searchWithIndex(normalizedQuery);
+      
+      // Si encontramos resultados con índice, usarlos inmediatamente
+      if (indexedResults.length > 0) {
+        console.log('Using indexed search results:', indexedResults.length);
+        setSearchResults(indexedResults);
+        // Guardar en caché
+        setSearchCache(prev => new Map(prev).set(normalizedQuery, indexedResults));
+        setIsSearching(false);
+        return;
+      }
+
+      // Si no hay resultados con índice, buscar en la API
+      const apiResults = await searchCharactersAPI(query);
+      
+      console.log('API search results:', apiResults.length);
+      setSearchResults(apiResults);
+      
+      // Guardar en caché
+      setSearchCache(prev => new Map(prev).set(normalizedQuery, apiResults));
+      
+    } catch (err) {
+      console.error('Error searching characters', err);
+      // Fallback a búsqueda local si la API falla
+      const localResults = searchLocalCharacters(query);
+      setSearchResults(localResults);
+      
+      if (localResults.length === 0) {
+        Alert.alert('Error', 'No se pudo realizar la búsqueda. Revisa la consola para más detalles.');
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const searchWithIndex = (query: string): any[] => {
+    const results = new Set<any>();
+    const queryWords = query.split(/[\s\-_]+/).filter(word => word.length > 0);
+    
+    queryWords.forEach(word => {
+      // Buscar coincidencias exactas primero
+      if (characterIndex.has(word)) {
+        characterIndex.get(word)!.forEach(char => results.add(char));
+      }
+      
+      // Buscar prefijos más largos si no hay coincidencias exactas
+      if (results.size === 0) {
+        for (let i = word.length; i >= 1; i--) {
+          const prefix = word.substring(0, i);
+          if (characterIndex.has(prefix)) {
+            characterIndex.get(prefix)!.forEach(char => results.add(char));
+            break; // Usar el prefijo más largo encontrado
+          }
+        }
+      }
+    });
+    
+    const resultArray = Array.from(results);
+    
+    // Ordenar por relevancia
+    return resultArray.sort((a, b) => {
+      const aName = a.name?.toLowerCase() || '';
+      const bName = b.name?.toLowerCase() || '';
+      
+      // Priorizar coincidencias exactas
+      if (aName === query && bName !== query) return -1;
+      if (bName === query && aName !== query) return 1;
+      
+      // Priorizar coincidencias que empiecen con el término
+      if (aName.startsWith(query) && !bName.startsWith(query)) return -1;
+      if (bName.startsWith(query) && !aName.startsWith(query)) return 1;
+      
+      // Ordenar alfabéticamente
+      return aName.localeCompare(bName);
+    });
+  };
+
+  const searchLocalCharacters = (query: string): any[] => {
+    const searchTerm = query.toLowerCase().trim();
+    
+    return allCharacters.filter(char => {
+      const name = char.name?.toLowerCase() || '';
+      
+      // Solo buscar en el nombre del personaje
+      // Búsqueda exacta del nombre
+      if (name === searchTerm) return true;
+      
+      // Búsqueda que empiece con el término
+      if (name.startsWith(searchTerm)) return true;
+      
+      // Búsqueda que contenga el término en el nombre
+      if (name.includes(searchTerm)) return true;
+      
+      return false;
+    }).sort((a, b) => {
+      const aName = a.name?.toLowerCase() || '';
+      const bName = b.name?.toLowerCase() || '';
+      const searchTerm = query.toLowerCase().trim();
+      
+      // Priorizar coincidencias exactas
+      if (aName === searchTerm && bName !== searchTerm) return -1;
+      if (bName === searchTerm && aName !== searchTerm) return 1;
+      
+      // Priorizar coincidencias que empiecen con el término
+      if (aName.startsWith(searchTerm) && !bName.startsWith(searchTerm)) return -1;
+      if (bName.startsWith(searchTerm) && !aName.startsWith(searchTerm)) return 1;
+      
+      // Ordenar alfabéticamente
+      return aName.localeCompare(bName);
+    });
+  };
+
+  const searchCharactersAPI = async (query: string): Promise<any[]> => {
+    const url = `${MARVEL_URL}?ts=${MARVEL_TS}&apikey=${MARVEL_APIKEY}&hash=${MARVEL_HASH}&nameStartsWith=${encodeURIComponent(query)}&limit=100`;
+      
+    console.log('Searching Marvel API:', url);
+    const resp = await fetch(url);
+    let json: any = null;
+    const contentType = resp.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      json = await resp.json();
+    } else {
+      const text = await resp.text();
+      try {
+        json = JSON.parse(text);
+      } catch (e) {
+        json = { raw: text };
+      }
+    }
+
+    console.log('Search response status:', resp.status);
+    
+    if (!resp.ok) {
+      const apiMessage = json?.message || json?.status || JSON.stringify(json);
+      console.error('Search API Error:', apiMessage);
+      throw new Error(`API Error: ${apiMessage}`);
+    }
+    
+    const results = json?.data?.results || [];
+    console.log('API search results (raw):', results.length);
+    
+    // Filtrar personajes válidos
+    const validResults = results.filter(isValidCharacter);
+    console.log('Valid API search results:', validResults.length);
+    
+    return validResults;
   };
 
   const toggleFavorite = async (char: any) => {
@@ -162,13 +412,40 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchCharacters(currentPage);
+      if (searchQuery.trim() === '') {
+        await fetchCharacters(currentPage);
+      } else {
+        await searchCharacters(searchQuery);
+      }
     } catch (error) {
       console.error('Error during refresh:', error);
     } finally {
       setRefreshing(false);
     }
   };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setIsSearching(false);
+    // Limpiar timeout si existe
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+      setSearchTimeout(null);
+    }
+  };
+
+  // Limpiar caché periódicamente para evitar uso excesivo de memoria
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      if (searchCache.size > 50) {
+        console.log('Clearing search cache to free memory');
+        setSearchCache(new Map());
+      }
+    }, 300000); // Cada 5 minutos
+
+    return () => clearInterval(cleanupInterval);
+  }, [searchCache]);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -232,27 +509,57 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Search Section */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar personajes..."
+            placeholderTextColor="#a0a0a0"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            clearButtonMode="never"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+              <Text style={styles.clearButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       {/* Characters Section */}
       <View style={styles.charactersSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Personajes</Text>
-          {totalResults > 0 && (
+          <Text style={styles.sectionTitle}>
+            {searchQuery.trim() !== '' ? 'Resultados de búsqueda' : 'Personajes'}
+          </Text>
+          {searchQuery.trim() !== '' ? (
+            <Text style={styles.sectionSubtitle}>
+              {searchResults.length} resultado{searchResults.length !== 1 ? 's' : ''} para "{searchQuery}"
+            </Text>
+          ) : totalResults > 0 && (
             <Text style={styles.sectionSubtitle}>
               Página {currentPage} de {totalPages} • {totalResults} personajes
             </Text>
           )}
         </View>
         
-        {loadingChars ? (
+        {(loadingChars || isSearching) ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#dc2626" />
-            <Text style={styles.loadingText}>Cargando personajes...</Text>
+            <Text style={styles.loadingText}>
+              {isSearching ? 'Buscando personajes...' : 'Cargando personajes...'}
+            </Text>
           </View>
-        ) : characters.length > 0 ? (
+        ) : (searchQuery.trim() !== '' ? searchResults.length > 0 : characters.length > 0) ? (
           <>
             <View style={styles.listWrapper}>
               <FlatList
-                data={characters}
+                data={searchQuery.trim() !== '' ? searchResults : characters}
                 keyExtractor={(item) => String(item.id)}
                 renderItem={renderItem}
                 numColumns={isLargeDesktop ? 3 : isDesktop ? 2 : 1}
@@ -265,59 +572,71 @@ export default function HomeScreen() {
               />
             </View>
             
-            {/* Pagination Controls */}
-            <View style={styles.paginationContainer}>
-              <TouchableOpacity 
-                style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
-                onPress={goToFirstPage}
-                disabled={currentPage === 1}
-              >
-                <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
-                  ««
-                </Text>
-              </TouchableOpacity>
+            {/* Pagination Controls - Only show when not searching */}
+            {searchQuery.trim() === '' && (
+              <View style={styles.paginationContainer}>
+                <TouchableOpacity 
+                  style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                  onPress={goToFirstPage}
+                  disabled={currentPage === 1}
+                >
+                  <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
+                    ««
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
-                onPress={goToPreviousPage}
-                disabled={currentPage === 1}
-              >
-                <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
-                  ‹ Anterior
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                  onPress={goToPreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
+                    ‹ Anterior
+                  </Text>
+                </TouchableOpacity>
 
-              <View style={styles.pageIndicator}>
-                <Text style={styles.pageNumber}>{currentPage}</Text>
-                <Text style={styles.pageTotal}>de {totalPages}</Text>
+                <View style={styles.pageIndicator}>
+                  <Text style={styles.pageNumber}>{currentPage}</Text>
+                  <Text style={styles.pageTotal}>de {totalPages}</Text>
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
+                  onPress={goToNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <Text style={[styles.paginationButtonText, currentPage === totalPages && styles.paginationButtonTextDisabled]}>
+                    Siguiente ›
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
+                  onPress={goToLastPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <Text style={[styles.paginationButtonText, currentPage === totalPages && styles.paginationButtonTextDisabled]}>
+                    »»
+                  </Text>
+                </TouchableOpacity>
               </View>
-
-              <TouchableOpacity 
-                style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
-                onPress={goToNextPage}
-                disabled={currentPage === totalPages}
-              >
-                <Text style={[styles.paginationButtonText, currentPage === totalPages && styles.paginationButtonTextDisabled]}>
-                  Siguiente ›
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
-                onPress={goToLastPage}
-                disabled={currentPage === totalPages}
-              >
-                <Text style={[styles.paginationButtonText, currentPage === totalPages && styles.paginationButtonTextDisabled]}>
-                  »»
-                </Text>
-              </TouchableOpacity>
-            </View>
+            )}
           </>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>No se encontraron personajes</Text>
-            <Text style={styles.emptySubtitle}>Parece que hay un problema con la conexión</Text>
-            <TouchableOpacity onPress={() => fetchCharacters(currentPage)} style={styles.retryButton}>
+            <Text style={styles.emptyTitle}>
+              {searchQuery.trim() !== '' ? 'No se encontraron resultados' : 'No se encontraron personajes'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery.trim() !== '' 
+                ? `No hay personajes que coincidan con "${searchQuery}"`
+                : 'Parece que hay un problema con la conexión'
+              }
+            </Text>
+            <TouchableOpacity 
+              onPress={() => searchQuery.trim() !== '' ? searchCharacters(searchQuery) : fetchCharacters(currentPage)} 
+              style={styles.retryButton}
+            >
               <Text style={styles.retryButtonText}>Reintentar</Text>
             </TouchableOpacity>
           </View>
@@ -400,6 +719,60 @@ const styles = StyleSheet.create({
   marvelLogo: {
     width: isLargeDesktop ? 400 : isDesktop ? 350 : isTablet ? 280 : 250,
     height: isLargeDesktop ? 130 : isDesktop ? 110 : isTablet ? 85 : 75,
+  },
+  searchSection: {
+    backgroundColor: '#3f1515',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#5a1f1f',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
+    fontWeight: '500',
+    paddingVertical: 4,
+  },
+  clearButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  clearButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   charactersSection: {
     flex: 1,
