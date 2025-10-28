@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -27,28 +28,60 @@ const isDesktop = screenWidth >= 1024;
 const isLargeDesktop = screenWidth >= 1440;
 
 export default function HomeScreen() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { favoriteIds, addFavorite, removeFavorite } = useFavorites();
 
   const [characters, setCharacters] = useState<any[]>([]);
   const [loadingChars, setLoadingChars] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
-  const [favorites, setFavorites] = useState<number[]>([]);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  
+  const CHARACTERS_PER_PAGE = 30;
+  const totalPages = Math.ceil(totalResults / CHARACTERS_PER_PAGE);
 
   useEffect(() => {
-    fetchCharacters();
-    if (user && user.uid) {
-      fetchUserFavorites();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+    fetchCharacters(currentPage);
+  }, [currentPage]);
 
-  const fetchCharacters = async () => {
+  const isValidCharacter = (char: any): boolean => {
+    // Verificar que tenga nombre
+    if (!char.name || char.name.trim() === '') {
+      return false;
+    }
+
+    // Verificar que tenga descripcion
+    if (!char.description || char.description.trim() === '') {
+      return false;
+    }
+
+    // Verificar que tenga thumbnail válido
+    if (!char.thumbnail || !char.thumbnail.path || !char.thumbnail.extension) {
+      return false;
+    }
+
+    // Verificar que la imagen no sea "image_not_available"
+    const thumbnailPath = char.thumbnail.path.toLowerCase();
+    if (thumbnailPath.includes('image_not_available')) {
+      return false;
+    }
+
+    // El personaje es válido si tiene nombre e imagen válida
+    // La descripción es opcional
+    return true;
+  };
+
+  const fetchCharacters = async (page: number = 1) => {
     setLoadingChars(true);
-    console.log('Starting to fetch characters...');
+    console.log('Fetching page:', page);
+    
     try {
-      const url = `${MARVEL_URL}?ts=${MARVEL_TS}&apikey=${MARVEL_APIKEY}&hash=${MARVEL_HASH}&limit=30`;
+      const offset = (page - 1) * CHARACTERS_PER_PAGE;
+      // Solicitamos más personajes para compensar el filtrado
+      const limit = CHARACTERS_PER_PAGE * 2;
+      const url = `${MARVEL_URL}?ts=${MARVEL_TS}&apikey=${MARVEL_APIKEY}&hash=${MARVEL_HASH}&limit=${limit}&offset=${offset}`;
+      
       console.log('Requesting Marvel:', url);
       const resp = await fetch(url);
       let json: any = null;
@@ -56,7 +89,6 @@ export default function HomeScreen() {
       if (contentType.includes('application/json')) {
         json = await resp.json();
       } else {
-        // fallback to text for unexpected responses
         const text = await resp.text();
         try {
           json = JSON.parse(text);
@@ -66,18 +98,29 @@ export default function HomeScreen() {
       }
 
       console.log('Marvel response status:', resp.status);
-      console.log('Marvel response data:', json);
       
       if (!resp.ok) {
-        // Show a helpful alert with status and any message returned by the API
         const apiMessage = json?.message || json?.status || JSON.stringify(json);
         console.error('API Error:', apiMessage);
         Alert.alert('Marvel API Error', `Status ${resp.status}: ${apiMessage}`);
         setCharacters([]);
       } else {
         const results = json?.data?.results || [];
-        console.log('Characters loaded:', results.length);
-        setCharacters(results);
+        const total = json?.data?.total || 0;
+        
+        console.log('Characters loaded (raw):', results.length);
+        console.log('Total available in Marvel:', total);
+        
+        // Filtrar personajes válidos
+        const validCharacters = results.filter(isValidCharacter);
+        console.log('Valid characters after filtering:', validCharacters.length);
+        console.log('Filtered out:', results.length - validCharacters.length, 'characters');
+        
+        // Limitar a 30 personajes por página
+        const displayCharacters = validCharacters.slice(0, CHARACTERS_PER_PAGE);
+        
+        setCharacters(displayCharacters);
+        setTotalResults(total);
       }
     } catch (err) {
       console.error('Error fetching characters', err);
@@ -88,88 +131,27 @@ export default function HomeScreen() {
     }
   };
 
-  const fetchUserFavorites = async () => {
-    if (!user || !user.uid) return;
-    
-    try {
-      const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
-      console.log('Fetching user favorites for uid:', user.uid);
-      
-      const response = await fetch(`${url}/users/${user.uid}/favorites`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User favorites response:', data);
-        
-        // Extraer los marvelId de los personajes favoritos
-        const favoriteIds = data.favorites?.map((fav: any) => fav.marvelId) || [];
-        console.log('Setting favorite IDs:', favoriteIds);
-        setFavorites(favoriteIds);
-      } else if (response.status === 404) {
-        // Usuario no encontrado, pero no es un error crítico
-        console.log('User not found in backend, starting with empty favorites');
-        setFavorites([]);
-      } else {
-        console.error('Error fetching favorites:', response.status);
-      }
-    } catch (error) {
-      console.error('Error fetching user favorites:', error);
-      // No mostramos alert aquí para no molestar al usuario, solo logueamos
-    }
-  };
-
   const toggleFavorite = async (char: any) => {
+    if (!user) {
+      Alert.alert('Error', 'Debes iniciar sesión para agregar favoritos');
+      return;
+    }
+
     const id = char.id as number;
-    const isFavorite = favorites.includes(id);
-    let updated: number[];
+    const isFavorite = favoriteIds.includes(id);
     
     if (isFavorite) {
-      updated = favorites.filter((f) => f !== id);
+      const success = await removeFavorite(id);
+      if (!success) {
+        Alert.alert('Error', 'No se pudo eliminar el favorito');
+      }
     } else {
-      updated = [...favorites, id];
-    }
-    setFavorites(updated);
-
-    // If user is authenticated, try to save/remove favorite in backend
-    if (user && user.uid) {
-      try {
-        const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
-        
-        if (isFavorite) {
-          // Remove from favorites
-          const response = await fetch(`${url}/users/${user.uid}/favorites/${id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-          });
-          
-          if (response.ok || response.status === 404) {
-            console.log('Favorito eliminado correctamente');
-          } else {
-            console.error('Error removing favorite:', response.status);
-            Alert.alert('Error', 'No se pudo eliminar el favorito');
-            setFavorites(favorites);
-          }
-        } else {
-          const addResponse = await fetch(`${url}/users/${user.uid}/favorites`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
-          });
-          if (!addResponse.ok && addResponse.status !== 409) {
-            console.error('Error adding favorite:', addResponse.status);
-            setFavorites(favorites);
-            Alert.alert('Error', 'No se pudo agregar a favoritos');
-          }
-        }
-      } catch (err) {
-        console.error('Error with favorite operation:', err);
-        // Revert local state on error
-        setFavorites(favorites);
-        Alert.alert('Error', 'No se pudo realizar la operación');
+      const success = await addFavorite(char);
+      if (!success) {
+        Alert.alert('Error', 'No se pudo agregar a favoritos');
       }
     }
   };
-
 
   const openCharacter = (char: any) => {
     setSelected(char);
@@ -180,10 +162,7 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
-        fetchCharacters(),
-        user && user.uid ? fetchUserFavorites() : Promise.resolve()
-      ]);
+      await fetchCharacters(currentPage);
     } catch (error) {
       console.error('Error during refresh:', error);
     } finally {
@@ -191,9 +170,29 @@ export default function HomeScreen() {
     }
   };
 
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToFirstPage = () => {
+    setCurrentPage(1);
+  };
+
+  const goToLastPage = () => {
+    setCurrentPage(totalPages);
+  };
+
   const renderItem = ({ item }: { item: any }) => {
     const thumb = `${item.thumbnail.path}.${item.thumbnail.extension}`.replace('http://', 'https://');
-    const isFavorite = favorites.includes(item.id);
+    const isFavorite = favoriteIds.includes(item.id);
     
     return (
       <TouchableOpacity 
@@ -237,6 +236,11 @@ export default function HomeScreen() {
       <View style={styles.charactersSection}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Personajes</Text>
+          {totalResults > 0 && (
+            <Text style={styles.sectionSubtitle}>
+              Página {currentPage} de {totalPages} • {totalResults} personajes
+            </Text>
+          )}
         </View>
         
         {loadingChars ? (
@@ -245,27 +249,75 @@ export default function HomeScreen() {
             <Text style={styles.loadingText}>Cargando personajes...</Text>
           </View>
         ) : characters.length > 0 ? (
-          <View style={styles.listWrapper}>
-            <FlatList
-              data={characters}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={renderItem}
-              numColumns={isLargeDesktop ? 3 : isDesktop ? 2 : 1}
-              columnWrapperStyle={isLargeDesktop || isDesktop ? styles.row : undefined}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              style={styles.flatList}
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-            />
-          </View>
+          <>
+            <View style={styles.listWrapper}>
+              <FlatList
+                data={characters}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderItem}
+                numColumns={isLargeDesktop ? 3 : isDesktop ? 2 : 1}
+                columnWrapperStyle={isLargeDesktop || isDesktop ? styles.row : undefined}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                style={styles.flatList}
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+              />
+            </View>
+            
+            {/* Pagination Controls */}
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity 
+                style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                onPress={goToFirstPage}
+                disabled={currentPage === 1}
+              >
+                <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
+                  ««
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                onPress={goToPreviousPage}
+                disabled={currentPage === 1}
+              >
+                <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
+                  ‹ Anterior
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.pageIndicator}>
+                <Text style={styles.pageNumber}>{currentPage}</Text>
+                <Text style={styles.pageTotal}>de {totalPages}</Text>
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
+                onPress={goToNextPage}
+                disabled={currentPage === totalPages}
+              >
+                <Text style={[styles.paginationButtonText, currentPage === totalPages && styles.paginationButtonTextDisabled]}>
+                  Siguiente ›
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
+                onPress={goToLastPage}
+                disabled={currentPage === totalPages}
+              >
+                <Text style={[styles.paginationButtonText, currentPage === totalPages && styles.paginationButtonTextDisabled]}>
+                  »»
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyTitle}>No se encontraron personajes</Text>
             <Text style={styles.emptySubtitle}>Parece que hay un problema con la conexión</Text>
-            <Text style={styles.debugText}>Loading: {loadingChars ? 'true' : 'false'}</Text>
-            <Text style={styles.debugText}>Characters: {characters.length}</Text>
-            <TouchableOpacity onPress={fetchCharacters} style={styles.retryButton}>
+            <TouchableOpacity onPress={() => fetchCharacters(currentPage)} style={styles.retryButton}>
               <Text style={styles.retryButtonText}>Reintentar</Text>
             </TouchableOpacity>
           </View>
@@ -297,15 +349,17 @@ export default function HomeScreen() {
               </View>
               
               <View style={styles.modalActions}>
-                {/* Quitar botón de eliminar favorito dentro del modal, solo mostrar acción para agregar */}
-                {!favorites.includes(selected.id) && (
+                {!favoriteIds.includes(selected.id) && (
                   <TouchableOpacity 
                     style={styles.favAction}
-                    onPress={() => toggleFavorite(selected)}
+                    onPress={() => {
+                      toggleFavorite(selected);
+                      closeModal();
+                    }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.favActionText}>
-                      {'Agregar a favoritos'}
+                      Agregar a favoritos
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -364,7 +418,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sectionSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#e8bdbd',
     fontWeight: '400',
   },
@@ -409,11 +463,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 16,
-  },
-  debugText: {
-    color: '#e8bdbd',
-    fontSize: 12,
-    marginVertical: 4,
   },
   listWrapper: {
     flex: 1,
@@ -601,17 +650,78 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(185, 107, 107, 0.3)',
   },
-  favActionActive: {
-    backgroundColor: '#8f8f8f',
-    borderColor: 'rgba(143, 143, 143, 0.3)',
-  },
   favActionText: {
     color: '#ffffff',
     fontSize: isLargeDesktop ? 18 : isDesktop ? 16 : 14,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  favActionTextActive: {
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 12,
+    backgroundColor: '#3f1515',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  paginationButton: {
+    backgroundColor: '#b96b6b',
+    paddingHorizontal: isLargeDesktop ? 20 : isDesktop ? 16 : 12,
+    paddingVertical: isLargeDesktop ? 12 : isDesktop ? 10 : 8,
+    borderRadius: 12,
+    shadowColor: '#b96b6b',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  paginationButtonDisabled: {
+    backgroundColor: '#8f8f8f',
+    shadowOpacity: 0.1,
+    opacity: 0.5,
+  },
+  paginationButtonText: {
     color: '#ffffff',
+    fontSize: isLargeDesktop ? 16 : isDesktop ? 14 : 12,
+    fontWeight: '700',
+  },
+  paginationButtonTextDisabled: {
+    color: '#e0e0e0',
+  },
+  pageIndicator: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: isLargeDesktop ? 24 : isDesktop ? 20 : 16,
+    paddingVertical: isLargeDesktop ? 12 : isDesktop ? 10 : 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    minWidth: isLargeDesktop ? 100 : isDesktop ? 80 : 70,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  pageNumber: {
+    color: '#ffffff',
+    fontSize: isLargeDesktop ? 24 : isDesktop ? 20 : 18,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  pageTotal: {
+    color: '#e8bdbd',
+    fontSize: isLargeDesktop ? 14 : isDesktop ? 12 : 10,
+    fontWeight: '500',
   },
 });

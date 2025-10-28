@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
-import React, { useEffect, useState } from 'react';
+import { useFavorites } from '@/contexts/FavoritesContext';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,46 +22,11 @@ const isLargeDesktop = screenWidth >= 1440;
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  const [favorites, setFavorites] = useState<any[]>([]);
-  const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const { favorites, loading: loadingFavorites, removeFavorite, refreshFavorites } = useFavorites();
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
+  
   const columns = favorites.length > 1 ? (isLargeDesktop ? 3 : isDesktop ? 2 : 1) : 1;
-
-  useEffect(() => {
-    if (user && user.uid) {
-      fetchUserFavorites();
-    }
-  }, [user]);
-
-  const fetchUserFavorites = async () => {
-    if (!user || !user.uid) return;
-    
-    setLoadingFavorites(true);
-    try {
-      const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
-      console.log('Fetching user favorites for uid:', user.uid);
-      
-      const response = await fetch(`${url}/users/${user.uid}/favorites`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User favorites response:', data);
-        setFavorites(data.favorites || []);
-      } else if (response.status === 404) {
-        console.log('User not found in backend, starting with empty favorites');
-        setFavorites([]);
-      } else {
-        console.error('Error fetching favorites:', response.status);
-        Alert.alert('Error', 'No se pudieron cargar los favoritos');
-      }
-    } catch (error) {
-      console.error('Error fetching user favorites:', error);
-      Alert.alert('Error', 'No se pudieron cargar los favoritos');
-    } finally {
-      setLoadingFavorites(false);
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -81,7 +47,7 @@ export default function ProfileScreen() {
     
     setRefreshing(true);
     try {
-      await fetchUserFavorites();
+      await refreshFavorites();
     } catch (error) {
       console.error('Error during refresh:', error);
     } finally {
@@ -92,29 +58,12 @@ export default function ProfileScreen() {
   const handleRemoveFavorite = async (character: any) => {
     if (!user || !user.uid) return;
 
-    try {
-      const marvelId = character.marvelId || character.id;
-      const url = process.env.EXPO_PUBLIC_API_URL || 'https://themarvelproject-backend.vercel.app/api';
-      
-      const response = await fetch(`${url}/users/${user.uid}/favorites/${marvelId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (response.ok) {
-        // Actualizar la lista local de favoritos
-        setFavorites(prevFavorites => 
-          prevFavorites.filter(fav => (fav.marvelId || fav.id) !== marvelId)
-        );
-        
-        console.log('Favorito eliminado correctamente');
-        closeModal();
-      } else {
-        console.error('Error removing favorite:', response.status);
-        Alert.alert('Error', 'No se pudo eliminar el favorito');
-      }
-    } catch (error) {
-      console.error('Error removing favorite:', error);
+    const marvelId = character.marvelId;
+    const success = await removeFavorite(marvelId);
+    
+    if (success) {
+      closeModal();
+    } else {
       Alert.alert('Error', 'No se pudo eliminar el favorito');
     }
   };
@@ -137,8 +86,6 @@ export default function ProfileScreen() {
       </TouchableOpacity>
     );
   };
-
-  // Usamos siempre FlatList para soportar pull-to-refresh incluso con 1 item
 
   if (!user) {
     return (
@@ -197,7 +144,7 @@ export default function ProfileScreen() {
             <FlatList
               key={`cols-${columns}`}
               data={favorites}
-              keyExtractor={(item) => String(item.marvelId || item.id)}
+              keyExtractor={(item) => String(item.marvelId)}
               renderItem={renderFavoriteItem}
               numColumns={columns}
               columnWrapperStyle={columns > 1 ? styles.favoritesRow : undefined}
