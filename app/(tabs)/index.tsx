@@ -143,7 +143,7 @@ export default function HomeScreen() {
           });
           
           if (response.ok || response.status === 404) {
-            Alert.alert('Éxito', 'Favorito eliminado correctamente');
+            console.log('Favorito eliminado correctamente');
           } else {
             console.error('Error removing favorite:', response.status);
             Alert.alert('Error', 'No se pudo eliminar el favorito');

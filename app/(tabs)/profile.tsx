@@ -107,7 +107,7 @@ export default function ProfileScreen() {
           prevFavorites.filter(fav => (fav.marvelId || fav.id) !== marvelId)
         );
         
-        Alert.alert('Éxito', 'Favorito eliminado correctamente');
+        console.log('Favorito eliminado correctamente');
         closeModal();
       } else {
         console.error('Error removing favorite:', response.status);
