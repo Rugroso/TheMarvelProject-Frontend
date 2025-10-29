@@ -591,7 +591,7 @@ export default function HomeScreen() {
                   disabled={currentPage === 1}
                 >
                   <Text style={[styles.paginationButtonText, currentPage === 1 && styles.paginationButtonTextDisabled]}>
-                    ‹ Anterior
+                    ‹
                   </Text>
                 </TouchableOpacity>
 
@@ -606,7 +606,7 @@ export default function HomeScreen() {
                   disabled={currentPage === totalPages}
                 >
                   <Text style={[styles.paginationButtonText, currentPage === totalPages && styles.paginationButtonTextDisabled]}>
-                    Siguiente ›
+                     ›
                   </Text>
                 </TouchableOpacity>
 
@@ -1033,9 +1033,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    gap: isLargeDesktop ? 12 : isDesktop ? 10 : isTablet ? 8 : 6,
     backgroundColor: '#3f1515',
     marginHorizontal: 16,
     marginBottom: 16,
@@ -1048,12 +1048,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+    flexWrap: 'nowrap',
+    maxWidth: '100%',
   },
   paginationButton: {
     backgroundColor: '#b96b6b',
-    paddingHorizontal: isLargeDesktop ? 20 : isDesktop ? 16 : 12,
-    paddingVertical: isLargeDesktop ? 12 : isDesktop ? 10 : 8,
-    borderRadius: 12,
+    paddingHorizontal: isLargeDesktop ? 16 : isDesktop ? 12 : isTablet ? 10 : 8,
+    paddingVertical: isLargeDesktop ? 10 : isDesktop ? 8 : isTablet ? 7 : 6,
+    borderRadius: 10,
     shadowColor: '#b96b6b',
     shadowOffset: {
       width: 0,
@@ -1062,6 +1064,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 1,
   },
   paginationButtonDisabled: {
     backgroundColor: '#8f8f8f',
@@ -1070,31 +1075,35 @@ const styles = StyleSheet.create({
   },
   paginationButtonText: {
     color: '#ffffff',
-    fontSize: isLargeDesktop ? 16 : isDesktop ? 14 : 12,
+    fontSize: isLargeDesktop ? 14 : isDesktop ? 12 : isTablet ? 11 : 10,
     fontWeight: '700',
+    textAlign: 'center',
   },
   paginationButtonTextDisabled: {
     color: '#e0e0e0',
   },
   pageIndicator: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: isLargeDesktop ? 24 : isDesktop ? 20 : 16,
-    paddingVertical: isLargeDesktop ? 12 : isDesktop ? 10 : 8,
-    borderRadius: 12,
+    paddingHorizontal: isLargeDesktop ? 20 : isDesktop ? 16 : isTablet ? 14 : 12,
+    paddingVertical: isLargeDesktop ? 10 : isDesktop ? 8 : isTablet ? 7 : 6,
+    borderRadius: 10,
     alignItems: 'center',
-    minWidth: isLargeDesktop ? 100 : isDesktop ? 80 : 70,
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    flexShrink: 1,
   },
   pageNumber: {
     color: '#ffffff',
-    fontSize: isLargeDesktop ? 24 : isDesktop ? 20 : 18,
+    fontSize: isLargeDesktop ? 20 : isDesktop ? 18 : isTablet ? 16 : 14,
     fontWeight: '800',
-    marginBottom: 2,
+    marginBottom: 1,
+    textAlign: 'center',
   },
   pageTotal: {
     color: '#e8bdbd',
-    fontSize: isLargeDesktop ? 14 : isDesktop ? 12 : 10,
+    fontSize: isLargeDesktop ? 12 : isDesktop ? 11 : isTablet ? 10 : 9,
     fontWeight: '500',
+    textAlign: 'center',
   },
 });

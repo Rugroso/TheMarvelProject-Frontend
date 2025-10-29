@@ -1,12 +1,13 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, SafeAreaView } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function TabLayout() {
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#5a1f1f' }}>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#b96b6b', // Rojo Marvel cálido
@@ -15,17 +16,9 @@ export default function TabLayout() {
           backgroundColor: '#5a1f1f', // Fondo rojo Marvel
           borderTopColor: 'rgba(255, 255, 255, 0.2)',
           borderTopWidth: 1,
-          height: Platform.OS === 'web' ? 70 : 60,
+          height: Platform.OS === 'web' ? 70 : 50,
           paddingBottom: Platform.OS === 'web' ? 10 : 5,
-          paddingTop: 8,
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: -4,
-          },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
+          paddingTop: 12,
         },
         tabBarLabelStyle: {
           fontSize: Platform.OS === 'web' ? 14 : 12,
@@ -62,5 +55,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </SafeAreaView>
   );
 }
